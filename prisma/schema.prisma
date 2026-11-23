@@ -1,0 +1,98 @@
+// Patient records for a single practice.
+//
+// Column names are snake_case in PostgreSQL (via @map) and camelCase in
+// TypeScript. The two partial indexes the product needs are declared below
+// where Prisma can express them. The case-insensitive name index cannot be
+// an expression index in the schema language, so it lives in the initial
+// SQL migration as patients_name_dob_active_idx. Leave that index in place.
+
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Lifecycle of a patient at the practice. New records start at `inquiry`.
+/// A provider may move a patient to any status, including back from `churned`.
+enum PatientStatus {
+  inquiry
+  onboarding
+  active
+  churned
+
+  @@map("patient_status")
+}
+
+/// A person the practice is tracking. Rows are soft-deleted (`deletedAt`),
+/// never removed, so a mistaken entry can be restored.
+model Patient {
+  id String @id @default(uuid()) @db.Uuid
+
+  /// Required. Compared case-insensitively when looking for possible duplicates.
+  firstName  String  @map("first_name")
+  /// Optional. Many people do not have a middle name.
+  middleName String? @map("middle_name")
+  lastName   String  @map("last_name")
+
+  /// Calendar date only. A timestamp would let a time zone change the day.
+  /// "Not in the future" and "age at most 130" are enforced in application
+  /// code: PostgreSQL rejects CURRENT_DATE in a CHECK because it is not immutable.
+  dateOfBirth DateTime @map("date_of_birth") @db.Date
+
+  status PatientStatus @default(inquiry)
+
+  addressLine1 String  @map("address_line1")
+  addressLine2 String? @map("address_line2")
+  city         String
+  /// USPS two-letter code. CHAR so a value cannot be longer than two characters.
+  state        String  @db.Char(2)
+  /// Text, not a number, so leading zeros and ZIP+4 survive.
+  zipCode      String  @map("zip_code")
+  /// Reserved for addresses outside the US. Every current row is US.
+  country      String  @default("US") @db.Char(2)
+
+  /// AES-256-GCM ciphertext of the digits only. Null when the patient has no SSN.
+  /// The plaintext is never stored and is never returned by the API.
+  ssnEncrypted Bytes?  @map("ssn_encrypted")
+  /// Plain last four digits, for masked display and last-four search.
+  ssnLast4     String? @map("ssn_last4") @db.Char(4)
+  /// Keyed HMAC of the nine digits. Unique so a second patient with the same
+  /// SSN is rejected without decrypting anyone. PostgreSQL allows many NULLs
+  /// in a unique column, which is what we want when the SSN was not provided.
+  ssnHash      String? @unique @map("ssn_hash")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  /// Set when a provider hides a mistaken or duplicate record. Null means the
+  /// row is visible. Distinct from status `churned`, which stays on the main list.
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  statusHistory PatientStatusHistory[]
+
+  /// Status filter on the live list. Soft-deleted rows are left out of the index.
+  @@index([status], map: "patients_status_active_idx", where: { deletedAt: null })
+  @@map("patients")
+}
+
+/// One row per status transition, including the transition from "no status"
+/// when the patient is created. The detail page shows these newest first.
+model PatientStatusHistory {
+  id String @id @default(uuid()) @db.Uuid
+
+  patientId  String         @map("patient_id") @db.Uuid
+  /// Null only on the row written at creation.
+  fromStatus PatientStatus? @map("from_status")
+  toStatus   PatientStatus  @map("to_status")
+  changedAt  DateTime       @default(now()) @map("changed_at") @db.Timestamptz(6)
+
+  // Restrict, rather than cascade, so a hard delete cannot erase the audit trail.
+  // The application soft-deletes and does not remove patients.
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
+
+  @@index([patientId, changedAt], map: "patient_status_history_patient_changed_idx")
+  @@map("patient_status_history")
+}
