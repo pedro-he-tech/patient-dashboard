@@ -38,6 +38,7 @@ The values in `.env.example` match `docker-compose.yml` and are for local develo
 | `npm run format`     | Rewrite files with Prettier                                          |
 | `npm run db:migrate` | Apply schema changes with Prisma Migrate, then regenerate the client |
 | `npm run db:seed`    | Replace the local sample patients                                    |
+| `npm run test`       | Run the API tests against a separate local database                  |
 
 `npm run db:migrate` uses `prisma migrate dev`, which is the development workflow (it can create a new migration and needs a shadow database). It is not the command to run against a production database.
 
@@ -54,14 +55,22 @@ Defined in `prisma/schema.prisma`.
 
 `npm run db:seed` loads eight fictional patients. Five have fake SSNs in the unissued 900–999 range. One row is soft-deleted. Re-running the seed clears those two tables and writes them again.
 
+## API
+
+Routes live under `/api/patients`. Handlers parse the request and call `src/lib/patients/service.ts`. Validation is the Zod schemas in `src/lib/patients/schema.ts`, which the forms can import later. Responses never include the SSN ciphertext, the SSN hash, or the full number. `ssn_last4` is the only SSN field returned.
+
+`npm run test` creates `patient_dashboard_test` on the local Postgres server and migrates it. The development database used by `npm run db:seed` is left alone.
+
 ## Layout
 
 ```
-src/app/                  routes and the root layout
+src/app/                  pages and the root layout
+src/app/api/patients/     HTTP handlers
 src/components/           header and shared UI
-src/components/ui/        shadcn/ui primitives
+src/lib/patients/         validation, serialization, and the patient service
 src/lib/prisma.ts         shared Prisma Client
 src/lib/ssn.ts            SSN encryption and hashing
+tests/                    API tests
 prisma/schema.prisma      data model
 prisma/migrations/        SQL migrations
 prisma/seed.ts            sample patients
