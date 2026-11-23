@@ -55,6 +55,10 @@ Defined in `prisma/schema.prisma`.
 
 `npm run db:seed` loads eight fictional patients. Five have fake SSNs in the unissued 900–999 range. One row is soft-deleted. Re-running the seed clears those two tables and writes them again.
 
+## Pages
+
+The screens call the `/api/patients` routes. The create and edit forms import the Zod schemas in `src/lib/patients/schema.ts`, so a value the form accepts is a value the API accepts. The browser never receives the full SSN. A chart shows `***-**-` plus `ssn_last4`, or "Not on file".
+
 ## API
 
 Routes live under `/api/patients`. Handlers parse the request and call `src/lib/patients/service.ts`. Validation is the Zod schemas in `src/lib/patients/schema.ts`, which the forms can import later. Responses never include the SSN ciphertext, the SSN hash, or the full number. `ssn_last4` is the only SSN field returned.

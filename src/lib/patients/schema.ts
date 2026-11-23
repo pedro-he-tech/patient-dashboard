@@ -6,9 +6,10 @@ import {
   utcToday,
 } from "./dates";
 import { PatientValidationError } from "./errors";
+import { PATIENT_STATUSES } from "./types";
 
 /**
- * Shared patient contract for the API and the future forms.
+ * Shared patient contract for the API and the forms.
  *
  * This module does not touch the database, so a client component can import
  * it. JSON keys are snake_case because the design names the wire fields that
@@ -16,9 +17,7 @@ import { PatientValidationError } from "./errors";
  * One schema means the form and the route reject the same values.
  */
 
-const STATUSES = ["inquiry", "onboarding", "active", "churned"] as const;
-
-export const patientStatusSchema = z.enum(STATUSES, {
+export const patientStatusSchema = z.enum(PATIENT_STATUSES, {
   error: "Status must be inquiry, onboarding, active, or churned.",
 });
 
@@ -80,6 +79,14 @@ export const dateOfBirthSchema = z
   .string({ error: "Date of birth is required." })
   .trim()
   .superRefine((value, ctx) => {
+    if (value === "") {
+      ctx.addIssue({
+        code: "custom",
+        message: "Date of birth is required.",
+      });
+      return;
+    }
+
     const date = parseCalendarDate(value);
     if (!date) {
       ctx.addIssue({
@@ -110,12 +117,34 @@ export const stateSchema = z
   .string({ error: "State is required." })
   .trim()
   .toUpperCase()
-  .regex(/^[A-Z]{2}$/, "Use a two-letter state code.");
+  .superRefine((value, ctx) => {
+    if (value === "") {
+      ctx.addIssue({ code: "custom", message: "State is required." });
+      return;
+    }
+    if (!/^[A-Z]{2}$/.test(value)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Use a two-letter state code.",
+      });
+    }
+  });
 
 export const zipCodeSchema = z
   .string({ error: "ZIP code is required." })
   .trim()
-  .regex(/^\d{5}(-\d{4})?$/, "Use a 5-digit ZIP or ZIP+4.");
+  .superRefine((value, ctx) => {
+    if (value === "") {
+      ctx.addIssue({ code: "custom", message: "ZIP code is required." });
+      return;
+    }
+    if (!/^\d{5}(-\d{4})?$/.test(value)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Use a 5-digit ZIP or ZIP+4.",
+      });
+    }
+  });
 
 export const countrySchema = z
   .string()
