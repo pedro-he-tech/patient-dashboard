@@ -5,20 +5,31 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const links = [
-  { href: "/patients", label: "Patients", exact: true },
-  { href: "/patients/deleted", label: "Deleted patients", exact: false },
+  { href: "/patients", label: "Patients" },
+  { href: "/patients/deleted", label: "Deleted patients" },
 ] as const;
 
 /**
- * The patients link is an exact match so it does not stay highlighted on
- * /patients/deleted, which also starts with /patients.
+ * Deleted patients is its own section. Every other /patients URL, including a
+ * chart and the create form, keeps the Patients link highlighted.
  */
+function isCurrent(pathname: string, href: string): boolean {
+  if (href === "/patients/deleted") {
+    return pathname.startsWith("/patients/deleted");
+  }
+  return (
+    pathname === "/patients" ||
+    (pathname.startsWith("/patients/") &&
+      !pathname.startsWith("/patients/deleted"))
+  );
+}
+
 export function SiteHeader() {
   const pathname = usePathname();
 
   return (
     <header className="border-b bg-background">
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
         <Link
           href="/patients"
           className="text-sm font-semibold tracking-tight focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -27,9 +38,7 @@ export function SiteHeader() {
         </Link>
         <nav aria-label="Primary" className="flex items-center gap-1">
           {links.map((link) => {
-            const active = link.exact
-              ? pathname === link.href
-              : pathname.startsWith(link.href);
+            const active = isCurrent(pathname, link.href);
 
             return (
               <Link

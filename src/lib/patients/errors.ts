@@ -1,4 +1,4 @@
-import type { PatientResponse } from "./serialize";
+import type { PatientResponse } from "./types";
 
 /** The request body or query string failed the shared patient schema. */
 export class PatientValidationError extends Error {

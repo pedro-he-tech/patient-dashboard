@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { PagePlaceholder } from "@/components/page-placeholder";
+import { Suspense } from "react";
+import { PatientList } from "@/components/patients/patient-list";
 
 export const metadata: Metadata = {
   title: "Patients",
@@ -7,10 +8,12 @@ export const metadata: Metadata = {
 
 export default function PatientsPage() {
   return (
-    <PagePlaceholder
-      title="Patients"
-      description="Search, filter, and open records for the practice. Every new patient starts as Inquiry, and Churned patients stay on this list."
-      empty="The patient table will go here, with name search, status filters, sorting, and pages of results."
-    />
+    <Suspense fallback={<ListFallback />}>
+      <PatientList mode="live" />
+    </Suspense>
   );
+}
+
+function ListFallback() {
+  return <p className="text-sm text-muted-foreground">Loading patients…</p>;
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
@@ -29,8 +30,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${sans.variable} ${mono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
-        <SiteHeader />
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+        <Suspense fallback={<div className="h-14 border-b bg-background" />}>
+          <SiteHeader />
+        </Suspense>
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
           {children}
         </main>
       </body>

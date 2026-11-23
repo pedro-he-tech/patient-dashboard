@@ -1,49 +1,15 @@
 import type {
   Patient,
-  PatientStatus,
   PatientStatusHistory,
 } from "../../generated/prisma/client";
 import { formatDateOnly } from "./dates";
+import type { PatientResponse, StatusHistoryResponse } from "./types";
 
-/**
- * Wire shape of a patient. Field names match the design (`page_size`,
- * `ssn_last4`, `date_of_birth`). This object is an allow-list: `ssn_encrypted`
- * and `ssn_hash` are never copied onto it, so a new secret column cannot leak
- * by being spread from the database row.
- */
-export type PatientResponse = {
-  id: string;
-  first_name: string;
-  middle_name: string | null;
-  last_name: string;
-  date_of_birth: string;
-  status: PatientStatus;
-  address_line1: string;
-  address_line2: string | null;
-  city: string;
-  state: string;
-  zip_code: string;
-  country: string;
-  ssn_last4: string | null;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-};
-
-export type StatusHistoryResponse = {
-  id: string;
-  patient_id: string;
-  from_status: PatientStatus | null;
-  to_status: PatientStatus;
-  changed_at: string;
-};
-
-export type PatientListResponse = {
-  data: PatientResponse[];
-  total: number;
-  page: number;
-  page_size: number;
-};
+export type {
+  PatientListResponse,
+  PatientResponse,
+  StatusHistoryResponse,
+} from "./types";
 
 /** CHAR columns come back space-padded. Trim so "MA" is not "MA ". */
 function trimChar(value: string | null): string | null {
